@@ -8,6 +8,12 @@
 #include <sstream>
 #include <iomanip>
 #include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <cstdlib>
+
+#define python_path "python excel_script.py table_1.cfg table_2.cfg"
+
 namespace Imitation {
     Point::Point(std::initializer_list<double> coords) {
         for (auto coord : coords) {
@@ -20,9 +26,9 @@ namespace Imitation {
     std::vector<double>& Point::get_coordinates() {
         return this->coordinates;
     }
-    std::string Point::to_string() const {
+    std::string Point::to_string() const{
         std::string res = "{";
-        for (auto coord : coordinates) {
+        for (auto coord: coordinates) {
             res.append(std::to_string(coord));
             res.append(", ");
         }
@@ -38,7 +44,7 @@ namespace Imitation {
             std::uniform_real_distribution<double> distribution(min_coords[i], max_coords[i]);
             coords.push_back(distribution(generator));
         }
-        return Imitation::Point{ coords };
+        return Imitation::Point{coords};
     }
     std::vector<Point> generate_random_point(size_t n, const std::vector<double>& min_coords, const std::vector<double>& max_coords, std::mt19937& generator) {
         std::vector<std::uniform_real_distribution<double>> distributions;
@@ -47,58 +53,19 @@ namespace Imitation {
         for (size_t i = 0; i < min_coords.size(); i++) {
             distributions.emplace_back(min_coords[i], max_coords[i]);
         }
-        for (; n > 0; n--) {
+        for (;n>0;n--) {
             std::vector<double> coords;
-            for (auto& distribution : distributions) {
+            for(auto& distribution : distributions) {
                 coords.push_back(distribution(generator));
             }
             res.push_back(coords);
         }
         return res;
     }
-    bool generate_flip() {
-        static std::mt19937 generator(static_cast<unsigned int>(time(0)));
-        std::uniform_real_distribution<double> distribution(0, 1);
-        bool res;
-        if (distribution(generator) <= 0.5) res = false;
-        else res = true;
-        return res;
-    }
-    std::vector<bool> generate_flip(size_t n) {
-        std::vector<bool> res;
-        for (; n > 0; n--) {
-            res.push_back(generate_flip());
-        }
-        return res;
-    }
-    double generate_double(double g_min, double g_max) {
-        static std::mt19937 generator(static_cast<unsigned int>(time(0)));
-        std::uniform_real_distribution<double> distribution(g_min, g_max);
-        return distribution(generator);
-    }
-    std::vector<double> generate_double(size_t n, double g_min, double g_max) {
-        std::vector<double> res;
-        for (; n > 0; n--) {
-            res.push_back(generate_double(g_min, g_max));
-        }
-        return res;
-    }
-    int generate_integer(int g_min, int g_max) {
-        static std::mt19937 generator(static_cast<unsigned int>(time(0)));
-        std::uniform_real_distribution<double> distribution(g_min, g_max);
-        return static_cast<int>(distribution(generator));
-    }
-    std::vector<int> generate_integer(size_t n, int g_min, int g_max) {
-        std::vector<int> res;
-        for (; n > 0; n--) {
-            res.push_back(generate_double(g_min, g_max));
-        }
-        return res;
-    }
     Circle::Circle(double r) {
         this->r = r;
-        this->x0 = 0;
-        this->y0 = 0;
+        this->x0=0;
+        this->y0=0;
     }
     Circle::Circle(double r, double x0, double y0) {
         this->r = r;
@@ -110,7 +77,7 @@ namespace Imitation {
         std::vector<double> coords = p.get_coordinates();
         double x1 = coords[0];
         double x2 = coords[1];
-        return (x1 - this->x0) * (x1 - this->x0) + (x2 - this->y0) * (x2 - this->y0) <= r * r;
+        return (x1-this->x0)*(x1-this->x0) + (x2-this->y0)*(x2-this->y0) <= r*r;
     }
     Table::Table(std::vector<std::vector<double>> cells, std::vector<std::string> cols_names, std::vector<std::string> rows_names, uint8_t spaces, uint8_t precision) {
         this->cells = cells;
@@ -121,11 +88,11 @@ namespace Imitation {
         this->spaces = spaces;
         this->precision = precision;
         this->max_row_size = 1;
-        for (std::string row : rows_names) {
+        for(std::string row: rows_names) {
             if (row.size() > this->max_row_size) this->max_row_size = row.size();
         }
     }
-    std::string Table::to_string() const {
+    std::string Table::to_string() const{
         uint8_t string_size;
         size_t head;
         if (cols_names[0].size() > spaces) {
@@ -133,42 +100,51 @@ namespace Imitation {
         }
         else head = spaces;
         std::stringstream stream;
-        std::string res = std::string(max_row_size + 1, ' ');
+        std::string res = std::string(max_row_size+1, ' ');
         res.append(cols_names[0]);
-        for (int i = 1; i < cols; i++) {
+        for(int i = 1; i<cols; i++) {
             res.append(std::string(spaces, ' '));
             res.append(cols_names[i]);
         }
         res.append("\n");
-        for (int i = 0; i < rows; i++) {
+        for(int i = 0; i<rows; i++) {
             res.append(rows_names[i]);
             res.append(" ");
-            if (max_row_size > rows_names[i].size()) res.append(std::string(max_row_size - rows_names[i].size(), ' '));
-            for (int j = 0; j < cols; j++) {
+            if (max_row_size > rows_names[i].size()) res.append(std::string(max_row_size-rows_names[i].size(), ' '));
+            for (int j = 0; j<cols; j++) {
                 stream << std::fixed << std::setprecision(precision) << cells[i][j];
-                string_size = digits(static_cast<int>(cells[i][j])) + 1 + precision;
+                string_size = digits(static_cast<int>(cells[i][j]))+ 1 + precision;
                 res.append(stream.str());
                 stream.str("");
-                res.append(std::string(head - string_size + spaces, ' '));
+                res.append(std::string(head-string_size+spaces, ' '));
             }
             res.append("\n");
         }
         return res;
+    }
+    std::vector<std::vector<double>> Table::get_numbers() {
+        return this->cells;
+    }
+    std::vector<std::string> Table::get_rows_names() {
+        return this->rows_names;
+    }
+    std::vector<std::string> Table::get_cols_names() {
+        return this->cols_names;
     }
     int digits(int num) {
         int res = 0;
         do {
             num /= 10;
             res++;
-        } while (num);
+        } while(num);
         return res;
     }
     double mean(std::vector<double>numbers) {
         double res = 0;
-        for (double j : numbers) {
-            res += j;
+        for(double j: numbers) {
+            res+=j;
         }
-        return res / numbers.size();
+        return res/numbers.size();
     }
     Rhombus::Rhombus(double x_left, double x_right, double x_top, double x_bot, double y_left, double y_right, double y_top, double y_bot) {
         this->x_left = x_left;
@@ -186,15 +162,49 @@ namespace Imitation {
         double d2 = (x_right - x_top) * (p.get_coordinates()[1] - y_top) - (y_right - y_top) * (p.get_coordinates()[0] - x_top);
         double d3 = (x_bot - x_right) * (p.get_coordinates()[1] - y_right) - (y_bot - y_right) * (p.get_coordinates()[0] - x_right);
         double d4 = (x_left - x_bot) * (p.get_coordinates()[1] - y_bot) - (y_left - y_bot) * (p.get_coordinates()[0] - x_bot);
-        // Åñëè âñå ïðîèçâåäåíèÿ èìåþò îäèíàêîâûé çíàê, òî÷êà íàõîäèòñÿ âíóòðè ðîìáà
+        // Ð•ÑÐ»Ð¸ Ð²ÑÐµ Ð¿Ñ€Ð¾Ð¸Ð·Ð²ÐµÐ´ÐµÐ½Ð¸Ñ Ð¸Ð¼ÐµÑŽÑ‚ Ð¾Ð´Ð¸Ð½Ð°ÐºÐ¾Ð²Ñ‹Ð¹ Ð·Ð½Ð°Ðº, Ñ‚Ð¾Ñ‡ÐºÐ° Ð½Ð°Ñ…Ð¾Ð´Ð¸Ñ‚ÑÑ Ð²Ð½ÑƒÑ‚Ñ€Ð¸ Ñ€Ð¾Ð¼Ð±Ð°
         return (d1 >= 0 && d2 >= 0 && d3 >= 0 && d4 >= 0) || (d1 <= 0 && d2 <= 0 && d3 <= 0 && d4 <= 0);
     }
+    void Table::makefile_by_table(std::string file_name, double square) {
+        std::ofstream out (file_name);
+        std::string out_string = "rows_names=";
+        for (auto j: rows_names) {
+            out_string.append(j);
+            out_string.append(",");
+        }
+        out_string.pop_back();
+        out_string.append("\ncols_names=");
+        for (auto j: cols_names) {
+            out_string.append(j);
+            out_string.append(",");
+        }
+        out_string.pop_back();
+        out_string.append("\ncells=");
+        for (auto i: cells) {
+            for(auto j: i) {
+                std::string str = std::to_string(j);
+                std::replace(str.begin(), str.end(), ',', '.');
+                out_string.append(str);
+                out_string.append(",");
+            }
+        }
+        out_string.pop_back();
+        out_string.append("\nsquare=");
+        std::string str = std::to_string(square);
+        std::replace(str.begin(), str.end(), ',', '.');
+        out_string.append(str);
+        out << out_string;
+        out.close();
+    }
+    void Table::pythonize() {
+        system(python_path);
+    }
 }
-std::ostream& operator << (std::ostream& os, const Imitation::Point& point)
+std::ostream& operator << (std::ostream &os, const Imitation::Point &point)
 {
     return os << point.to_string();
 }
-std::ostream& operator << (std::ostream& os, const Imitation::Table& table)
+std::ostream& operator << (std::ostream &os, const Imitation::Table &table)
 {
     return os << table.to_string();
 }
